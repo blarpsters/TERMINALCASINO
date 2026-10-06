@@ -23,6 +23,13 @@ pip install -r requirements.txt
 python -m casino.main
 ```
 
+### Homepage controls
+
+Enter your name and press Enter or click **Enter Casino**. Select any game
+with the mouse, or use Tab and Enter. The game runs in the original terminal
+interface; when it finishes, the game menu reopens with your current balance.
+Use **Quit Casino** or Escape to exit. The game list scrolls on smaller terminals.
+
 ## Roadmap
 
 1. Documentation: continue to update the new docs/ folder with technical explanations of the games (keyed towards developers, not users)
