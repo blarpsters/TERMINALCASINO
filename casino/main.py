@@ -7,8 +7,12 @@ from .config import Config
 from .types import GameContext
 from .utils import cprint, cinput, clear_screen, display_topbar, get_theme
 from textual.app import App, ComposeResult
-from textual.widgets import Footer, Header, Input, Static, Button
-from textual.containers import VerticalScroll
+from textual.widgets import Footer, Header, Input, Label,SelectionList, Static, ContentSwitcher, Button
+from textual import on
+from textual.containers import Horizontal
+from textual.widgets.selection_list import Selection
+
+
 
 
 CASINO_HEADER = """
@@ -71,86 +75,138 @@ def prompt_with_refresh(
         last_error = error_message
 
 
-class CasinoPage(App[str]):
-    """Shared layout for the Textual homepage and game selection."""
-
-    TITLE = "Terminal Casino"
-    BINDINGS = [("escape", "quit", "Quit")]
+class NameSelect(App):
+    
     CSS = """
-    Screen { align: center top; }
-    #body { width: 100%; max-width: 64; padding: 1 2; }
     #title {
         text-align: center;
         width: 100%;
         color: gold;
         text-style: bold;
-        margin-bottom: 1;
+        margin-top: 2;
+
     }
-    #subtitle { text-align: center; margin-bottom: 1; }
-    Input { margin-bottom: 1; }
-    Button { width: 100%; margin-bottom: 1; }
-    #error { color: $error; height: auto; margin-bottom: 1; }
     """
-
-
-class NameSelect(CasinoPage):
     def compose(self) -> ComposeResult:
+        self.title = "Terminal Casino"
         yield Header()
-        with VerticalScroll(id="body"):
-            yield Static("♦ TERMINAL CASINO ♦", id="title")
-            yield Static("Enter your name to start playing.", id="subtitle")
-            yield Input(placeholder="Your name", id="name-input")
-            yield Static("", id="error")
-            yield Button("Enter Casino", variant="success", id="enter")
-            yield Button("Quit", id="quit")
         yield Footer()
+        yield Static("♦ T E R M I N A L  C A S I N O ♦", id="title")
 
-    def on_mount(self) -> None:
-        self.query_one(Input).focus()
 
-    def submit_name(self) -> None:
-        name = self.query_one(Input).value.strip()
-        if not name:
-            self.query_one("#error", Static).update("Please enter your name.")
-            self.query_one(Input).focus()
-            return
-        self.exit(name)
+        yield Input(placeholder="Enter Your Name",type="text", id="name-input")
+
+
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
-        self.submit_name()
+        name = event.value.strip()
+        if name:
+            self.notify(f"Welcome, {name}")
+            self.query_one("#name-input").remove()
+            self.exit(name)
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "enter":
-            self.submit_name()
-        elif event.button.id == "quit":
-            self.exit()
+       
 
 
-class GameSelect(CasinoPage):
-    def __init__(self, username: str, balance: int = ACCOUNT_STARTING_BALANCE):
+class GameSelect(App):
+    CSS = """
+    #title {
+        text-align: center;
+        width: 100%;
+        color: gold;
+        text-style: bold;
+        margin-top: 2;
+
+    }
+    #subtitle {
+        text-align: center;
+        width: 100%;
+        color: cyan;
+        text-style: bold;
+    }
+    #enter{
+
+        text-align: center;
+        color:white;
+        background:black;
+
+    }
+    Horizontal{
+    
+    align: center middle;
+    }
+    
+    """
+    def __init__(self, username: str):
         super().__init__()
         self.username = username
-        self.balance = balance
-        self.game_ids = {f"game-{i}": name for i, name in enumerate(ALL_GAMES)}
-
+    
     def compose(self) -> ComposeResult:
+        self.title = "Terminal Casino"
         yield Header()
-        with VerticalScroll(id="body"):
-            yield Static("♦ TERMINAL CASINO ♦", id="title")
-            yield Static(
-                f"Welcome, {self.username}!\nBalance: {self.balance} | Choose a game",
-                id="subtitle", markup=False,
-            )
-            for button_id, name in self.game_ids.items():
-                yield Button(name.title(), id=button_id, variant="primary")
-            yield Button("Quit Casino", id="quit")
-        yield Footer()
+        yield Static("♦ T E R M I N A L  C A S I N O ♦", id="title")
+        yield Static(f"Welcome {self.username}!",id="subtitle")
+        with Horizontal():
+            for i, name in enumerate(ALL_GAMES, start=1):
+                yield Button(name.title(), id=f"g{i}")
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.exit(str(event.button.id))
+
+class MenuSelect(App):
+    CSS = """
+    #title {
+        text-align: center;
+        width: 100%;
+        color: gold;
+        text-style: bold;
+        margin-top: 2;
+
+    }
+    #subtitle {
+        text-align: center;
+        width: 100%;
+        color: cyan;
+        text-style: bold;
+    }
+    #enter{
+
+        text-align: center;
+        color:white;
+        background:green;
+
+    }
+    #exit{
+
+        text-align: center;
+        color:white;
+        background:red;
+
+    }
+    Horizontal{
+        align: center middle;
+    }
+    
+    """
+    def __init__(self, username: str):
+        super().__init__()
+        self.username = username
+    
+    def compose(self) -> ComposeResult:
+        self.title = "Terminal Casino"
+        yield Header()
+        yield Static("♦ T E R M I N A L  C A S I N O ♦", id="title")
+        yield Static(f"Welcome {self.username}!",id="subtitle")
+        with Horizontal():
+            yield Button("Enter", id="enter")
+            yield Button("Exit", id="exit")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "quit":
-            self.exit()
-        elif event.button.id in self.game_ids:
-            self.exit(self.game_ids[event.button.id])
+        self.exit(str(event.button.id))
+
+
+
+
+
 
 
 def main_menu(ctx: GameContext) -> None:
@@ -215,31 +271,60 @@ def main_menu(ctx: GameContext) -> None:
             cprint("\nNo such game!\n")
 
 
-def main(name: str | None = None) -> None:
-    """Run Textual menus, closing the UI before each legacy game starts."""
-    name = name.strip() if name is not None else NameSelect().run()
-    if not name:
-        return
-
-    ctx = GameContext(
-        account=Account.generate(name, ACCOUNT_STARTING_BALANCE),
-        config=Config.default(),
-    )
-    while True:
-        selected_game = GameSelect(ctx.account.name, ctx.account.balance).run()
-        if selected_game is None:
-            break
-        # App.run() has restored the terminal before the game uses input/print.
-        clear_screen()
-        GAME_HANDLERS[selected_game](ctx)
+def main(name: str):
 
     clear_screen()
-    cprint("\nGoodbye!\n")
+    display_topbar(account=None, **CASINO_HEADER_OPTIONS)
+
+    
+    name =name
+    # theme selection
+    clear_screen()
+    display_topbar(account=None, **CASINO_HEADER_OPTIONS)
+    get_theme()
+
+
+    account = Account.generate(name, ACCOUNT_STARTING_BALANCE)
+    config = Config.default()
+    ctx = GameContext(account=account, config=config)
+    main_menu(ctx)
 
 
 if __name__ == "__main__":
     try:
-        main()
+
+        name = ""
+        app = NameSelect() #username select
+        name = app.run()
+        account = Account.generate(name, ACCOUNT_STARTING_BALANCE)
+        config = Config.default()
+        ctx = GameContext(account=account, config=config)
+        while True:
+        
+            app = MenuSelect(username=name) #Quit or Enter the Casino
+
+            step = app.run()
+
+            if(step == "exit"):
+                exit()
+
+
+            app = GameSelect(username=name) #Select Game Mode
+            
+            iden = app.run()
+
+            print(f"selected {iden}")
+            choice = int(iden[1:])
+
+            selected_game = ALL_GAMES[int(choice) - 1] #Go to Desired Game
+            handler = GAME_HANDLERS.get(selected_game)
+            clear_screen()
+            handler(ctx)  # returns to loop after game finishes
+
+
+
     except (KeyboardInterrupt, EOFError):
         clear_screen()
+        display_topbar(account=None, **CASINO_HEADER_OPTIONS)
         cprint("\nGoodbye! (Interrupted)\n")
+
